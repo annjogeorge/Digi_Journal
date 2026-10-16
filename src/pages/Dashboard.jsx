@@ -7,6 +7,7 @@ import RetroNavbar from '../components/ui/RetroNavbar';
 import PixelButton from '../components/ui/PixelButton';
 import RetroPet from '../components/ui/RetroPet';
 import OnboardingTutorial from '../components/ui/OnboardingTutorial';
+import AuthPromptModal from '../components/ui/AuthPromptModal';
 import { IMAGES } from '../constants/assets';
 import { soundFx } from '../utils/soundEffects';
 import { useJournal } from '../context/JournalContext';
@@ -25,6 +26,7 @@ import {
 export default function Dashboard() {
   const navigate = useNavigate();
   const {
+    user,
     entries,
     todos,
     letters,
@@ -38,6 +40,8 @@ export default function Dashboard() {
     replayTutorial,
   } = useJournal();
   const [viewMode, setViewMode] = useState('desktop'); // default to 'desktop' as requested
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authPromptAction, setAuthPromptAction] = useState('write reflections');
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayEntry = entries.find((e) => e.date === todayStr);
@@ -45,12 +49,12 @@ export default function Dashboard() {
   const streak = getStreakData();
 
   const desktopIcons = [
-    { title: 'My Journal', path: '/journal', icon: IMAGES.hero || IMAGES.computer, label: 'jounaling' },
-    { title: 'To-Do Quest', path: '/todo', icon: IMAGES.todo || IMAGES.controller, label: 'to dooo' },
-    { title: 'Future Mail', path: '/future-me', icon: IMAGES.future || IMAGES.msg, label: 'future mails' },
-    { title: 'Calendar', path: '/journal', isCalendar: true, label: 'calendar' },
-    { title: 'Stats & XP', path: '/stats', icon: IMAGES.computer, label: 'stats' },
-    { title: 'Settings', path: '/settings', icon: IMAGES.cd, label: 'settings' },
+    { title: 'My Journal', path: '/journal', icon: IMAGES.hero || IMAGES.computer, label: 'Journaling' },
+    { title: 'Tasks & Quests', path: '/todo', icon: IMAGES.todo || IMAGES.controller, label: 'Tasks' },
+    { title: 'Future Letters', path: '/future-me', icon: IMAGES.future || IMAGES.msg, label: 'Future Letters' },
+    { title: 'Calendar', path: '/journal?tab=calendar', isCalendar: true, label: 'Calendar' },
+    { title: 'Stats & XP', path: '/stats', icon: IMAGES.computer, label: 'Statistics' },
+    { title: 'Settings', path: '/settings', icon: IMAGES.cd, label: 'Settings' },
   ];
 
   return (
@@ -82,7 +86,7 @@ export default function Dashboard() {
               <Sparkles size={12} className="text-[#f3df23]" />
             </div>
             <h1 className="font-pixel text-lg sm:text-xl md:text-2xl text-white tracking-wide">
-              Welcome back, {profile.name || 'Annjo'}!
+              Welcome back, {user ? (profile.name || 'Adventurer') : 'Explorer'}!
             </h1>
             <p className="text-white/75 text-xs sm:text-sm mt-1 font-sans">
               Ready for your daily journaling quest? Level {currentLevel} Adventurer.
@@ -404,7 +408,14 @@ export default function Dashboard() {
                   <PixelButton
                     size="sm"
                     variant="yellow"
-                    onClick={() => navigate('/journal')}
+                    onClick={() => {
+                      if (!user && !todayEntry) {
+                        setAuthPromptAction('write and record daily reflections');
+                        setIsAuthModalOpen(true);
+                        return;
+                      }
+                      navigate('/journal');
+                    }}
                   >
                     {todayEntry ? 'Open Digital Book' : '+ Write Reflection'}
                   </PixelButton>
@@ -432,6 +443,13 @@ export default function Dashboard() {
         isOpen={isTutorialOpen}
         onClose={() => setIsTutorialOpen(false)}
         onFinish={completeTutorial}
+      />
+
+      {/* Authentication Prompt Modal for protected actions */}
+      <AuthPromptModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        actionName={authPromptAction}
       />
     </div>
   );

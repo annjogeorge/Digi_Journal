@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { soundFx } from '../../utils/soundEffects';
+import RetroSelect from './RetroSelect';
 
 const MOOD_ICONS = {
   happy: Smile,
@@ -160,21 +161,26 @@ export default function JournalSideIndex({
 
         {/* Filter and Sort Toggles */}
         <div className="flex items-center justify-between gap-1.5 font-sans text-xs">
-          <select
-            value={moodFilter}
-            onChange={(e) => setMoodFilter(e.target.value)}
-            className="bg-[#0e0c29] border border-black/70 text-[11px] text-white py-1 px-1.5 focus:outline-none cursor-pointer rounded-xs"
-          >
-            <option value="all">All Moods</option>
-            <option value="happy">Happy</option>
-            <option value="calm">Calm</option>
-            <option value="excited">Excited</option>
-            <option value="neutral">Neutral</option>
-            <option value="grateful">Grateful</option>
-            <option value="tired">Tired</option>
-            <option value="anxious">Anxious</option>
-            <option value="sad">Sad</option>
-          </select>
+          <div className="flex-1 min-w-0">
+            <RetroSelect
+              value={moodFilter}
+              onChange={(val) => setMoodFilter(val)}
+              options={[
+                { value: 'all', label: 'All Moods' },
+                { value: 'happy', label: 'Happy', color: MOOD_COLORS.happy },
+                { value: 'calm', label: 'Calm', color: MOOD_COLORS.calm },
+                { value: 'excited', label: 'Excited', color: MOOD_COLORS.excited },
+                { value: 'neutral', label: 'Neutral', color: MOOD_COLORS.neutral },
+                { value: 'grateful', label: 'Grateful', color: MOOD_COLORS.grateful },
+                { value: 'tired', label: 'Tired', color: MOOD_COLORS.tired },
+                { value: 'anxious', label: 'Anxious', color: MOOD_COLORS.anxious },
+                { value: 'sad', label: 'Sad', color: MOOD_COLORS.sad },
+              ]}
+              size="sm"
+              buttonClassName="bg-[#0e0c29] border border-black/70 text-[11px] py-1 px-2 hover:bg-[#1c184d]"
+              menuClassName="bg-[#0e0c29] border border-black/80"
+            />
+          </div>
 
           <div className="flex items-center gap-1">
             <button

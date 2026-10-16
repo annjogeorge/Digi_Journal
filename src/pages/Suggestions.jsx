@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import RetroNavbar from '../components/ui/RetroNavbar';
 import PixelStars from '../components/ui/PixelStars';
 import PixelButton from '../components/ui/PixelButton';
+import RetroSelect from '../components/ui/RetroSelect';
 import { useJournal } from '../context/JournalContext';
 import { soundFx } from '../utils/soundEffects';
 import { supabase } from '../services/supabase';
@@ -221,21 +222,14 @@ export default function Suggestions() {
 
                 {/* Category Dropdown */}
                 <div>
-                  <label htmlFor="page-suggestion-category" className="block font-pixel text-[10px] text-[#f3df23] uppercase mb-1.5">
-                    Feedback Category:
-                  </label>
-                  <select
+                  <RetroSelect
                     id="page-suggestion-category"
+                    label="Feedback Category:"
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-black/60 border-2 border-black px-3.5 py-2 text-xs text-white font-sans focus:outline-none focus:border-[#f3df23]"
-                  >
-                    {SUGGESTION_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat} className="bg-[#1b1847] text-white">
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setCategory}
+                    options={SUGGESTION_CATEGORIES}
+                    className="w-full"
+                  />
                 </div>
 
                 {/* Multiline Textarea */}

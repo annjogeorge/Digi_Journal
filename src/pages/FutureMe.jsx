@@ -5,17 +5,20 @@ import PixelStars from '../components/ui/PixelStars';
 import PixelButton from '../components/ui/PixelButton';
 import RetroWindow from '../components/ui/RetroWindow';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import AuthPromptModal from '../components/ui/AuthPromptModal';
 import { useJournal } from '../context/JournalContext';
 import { soundFx } from '../utils/soundEffects';
 import { Mail, Lock, Unlock, Plus, Trash2, Calendar, Clock, Send, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function FutureMe() {
-  const { letters, saveLetter, openLetter, deleteLetter } = useJournal();
+  const { user, letters, saveLetter, openLetter, deleteLetter } = useJournal();
   const [filter, setFilter] = useState('all'); // all, locked, ready, opened
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [readingLetter, setReadingLetter] = useState(null);
   const [lockedNotice, setLockedNotice] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authPromptAction, setAuthPromptAction] = useState('write and seal letters to future self');
 
   // Form states
   const [title, setTitle] = useState('');
@@ -116,6 +119,11 @@ export default function FutureMe() {
             variant="yellow"
             icon={<Plus size={15} />}
             onClick={() => {
+              if (!user) {
+                setAuthPromptAction('write and seal letters to your future self');
+                setIsAuthModalOpen(true);
+                return;
+              }
               soundFx.play('click');
               setIsComposeOpen(true);
             }}
@@ -434,6 +442,13 @@ export default function FutureMe() {
             </motion.div>
           )}
         </RetroWindow>
+
+        {/* Authentication Prompt Modal for protected actions */}
+        <AuthPromptModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          actionName={authPromptAction}
+        />
       </main>
     </div>
   );

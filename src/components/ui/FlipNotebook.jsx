@@ -38,6 +38,8 @@ export default function FlipNotebook({
   allEntries = [],
   onSelectEntry,
   onToggleSideIndex,
+  isReadOnly = false,
+  onRequireAuth,
 }) {
   // Entry field states
   const [title, setTitle] = useState('');
@@ -164,6 +166,11 @@ export default function FlipNotebook({
   );
 
   const handleManualSave = () => {
+    if (isReadOnly) {
+      soundFx.play('blip');
+      onRequireAuth?.('save journal entries');
+      return;
+    }
     soundFx.play('page');
     performSave();
   };
@@ -171,6 +178,10 @@ export default function FlipNotebook({
   // Debounced Autosave (800ms)
   const triggerDebouncedAutosave = useCallback(
     (updates = {}) => {
+      if (isReadOnly) {
+        setSaveStatus('Preview Mode');
+        return;
+      }
       setSaveStatus('Unsaved changes');
       if (autosaveTimeoutRef.current) {
         clearTimeout(autosaveTimeoutRef.current);
@@ -179,11 +190,16 @@ export default function FlipNotebook({
         performSave(updates);
       }, 800);
     },
-    [performSave]
+    [performSave, isReadOnly]
   );
 
   // Sticker actions
   const handleAddSticker = (stickerId) => {
+    if (isReadOnly) {
+      soundFx.play('blip');
+      onRequireAuth?.('decorate your journal with stickers');
+      return;
+    }
     const newSticker = {
       id: `sticker-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       stickerId,
@@ -313,6 +329,11 @@ export default function FlipNotebook({
             variant="yellow"
             icon={<BookOpen size={14} />}
             onClick={() => {
+              if (isReadOnly) {
+                soundFx.play('blip');
+                onRequireAuth?.('create new journal pages');
+                return;
+              }
               soundFx.play('click');
               setIsNewPageModalOpen(true);
             }}
@@ -325,6 +346,11 @@ export default function FlipNotebook({
             <button
               type="button"
               onClick={() => {
+                if (isReadOnly) {
+                  soundFx.play('blip');
+                  onRequireAuth?.('favorite journal pages');
+                  return;
+                }
                 const nextFav = !isFavorite;
                 setIsFavorite(nextFav);
                 onToggleFavorite?.(entry.id);
@@ -342,7 +368,14 @@ export default function FlipNotebook({
           {entry && (
             <button
               type="button"
-              onClick={() => setIsDeleteConfirmOpen(true)}
+              onClick={() => {
+                if (isReadOnly) {
+                  soundFx.play('blip');
+                  onRequireAuth?.('delete journal pages');
+                  return;
+                }
+                setIsDeleteConfirmOpen(true);
+              }}
               title="Delete Page"
               className="p-2 bg-rose-600 hover:bg-rose-700 text-white border-2 border-black cursor-pointer shadow-[2px_2px_0px_#000] transition-colors"
             >

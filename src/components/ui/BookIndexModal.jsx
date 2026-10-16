@@ -20,6 +20,7 @@ import {
   Frown,
 } from 'lucide-react';
 import { soundFx } from '../../utils/soundEffects';
+import RetroSelect from './RetroSelect';
 
 const MOOD_ICONS = {
   happy: Smile,
@@ -125,24 +126,29 @@ export default function BookIndexModal({
             {/* Filter buttons */}
             <div className="flex flex-wrap items-center gap-2 font-sans text-xs">
               {/* Mood Filter */}
-              <select
-                value={selectedMood}
-                onChange={(e) => {
-                  soundFx.play('blip');
-                  setSelectedMood(e.target.value);
-                }}
-                className="bg-[#fcfbf7] border-2 border-[#3d2f1f]/60 text-xs py-1.5 px-2 text-[#2b251f] focus:outline-none cursor-pointer"
-              >
-                <option value="all">All Moods</option>
-                <option value="happy">Happy</option>
-                <option value="calm">Calm</option>
-                <option value="excited">Excited</option>
-                <option value="neutral">Neutral</option>
-                <option value="grateful">Grateful</option>
-                <option value="tired">Tired</option>
-                <option value="anxious">Anxious</option>
-                <option value="sad">Sad</option>
-              </select>
+              <div className="w-36">
+                <RetroSelect
+                  value={selectedMood}
+                  onChange={(val) => {
+                    soundFx.play('blip');
+                    setSelectedMood(val);
+                  }}
+                  options={[
+                    { value: 'all', label: 'All Moods' },
+                    { value: 'happy', label: 'Happy' },
+                    { value: 'calm', label: 'Calm' },
+                    { value: 'excited', label: 'Excited' },
+                    { value: 'neutral', label: 'Neutral' },
+                    { value: 'grateful', label: 'Grateful' },
+                    { value: 'tired', label: 'Tired' },
+                    { value: 'anxious', label: 'Anxious' },
+                    { value: 'sad', label: 'Sad' },
+                  ]}
+                  size="sm"
+                  buttonClassName="bg-[#fcfbf7] border-2 border-[#3d2f1f]/60 text-xs py-1 px-2 text-[#2b251f] hover:bg-[#f2ecdc]"
+                  menuClassName="bg-[#fcfbf7] border-2 border-[#3d2f1f] text-[#2b251f]"
+                />
+              </div>
 
               {/* Favorites toggle */}
               <button

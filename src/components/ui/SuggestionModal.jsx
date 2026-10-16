@@ -3,6 +3,7 @@ import { useJournal } from '../../context/JournalContext';
 import { soundFx } from '../../utils/soundEffects';
 import RetroWindow from './RetroWindow';
 import PixelButton from './PixelButton';
+import RetroSelect from './RetroSelect';
 import { MessageSquare, Sparkles, Send, AlertCircle, ShieldCheck, Mail, CheckCircle2 } from 'lucide-react';
 
 export const SUGGESTION_CATEGORIES = [
@@ -126,21 +127,14 @@ export default function SuggestionModal({ isOpen, onClose }) {
 
           {/* Category Selector */}
           <div>
-            <label htmlFor="suggestion-category" className="block font-pixel text-[10px] text-[#f3df23] uppercase mb-1">
-              Feedback Category
-            </label>
-            <select
+            <RetroSelect
               id="suggestion-category"
+              label="Feedback Category"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-black/60 border-2 border-black px-3 py-2 text-xs text-white font-sans focus:outline-none focus:border-[#f3df23]"
-            >
-              {SUGGESTION_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat} className="bg-[#1b1847] text-white">
-                  {cat}
-                </option>
-              ))}
-            </select>
+              onChange={setCategory}
+              options={SUGGESTION_CATEGORIES}
+              className="w-full"
+            />
           </div>
 
           {/* Message Textarea */}
