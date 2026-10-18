@@ -14,6 +14,8 @@ import msg from '../assets/images/msg.png';
 import sticker from '../assets/images/sticker.png';
 import todo from '../assets/images/todo.png';
 import upload from '../assets/images/upload.png';
+import calendarIcon from '../assets/images/calendar_icon.png';
+import diaryIcon from '../assets/images/diary_icon.png';
 
 export const IMAGES = {
   computer,
@@ -32,4 +34,6 @@ export const IMAGES = {
   sticker,
   todo,
   upload,
+  calendar: calendarIcon,
+  diary: diaryIcon,
 };

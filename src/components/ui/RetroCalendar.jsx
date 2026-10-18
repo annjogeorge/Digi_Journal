@@ -149,13 +149,13 @@ export default function RetroCalendar({ entries = [], onSelectDate, selectedDate
       </div>
 
       {/* Days grid with large, comfortable touch and click targets */}
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+      <div className="grid grid-cols-7 gap-2 sm:gap-2.5">
         {days.map((item, idx) => {
           if (!item.isCurrentMonth) {
             return (
               <div
                 key={`empty-${idx}`}
-                className="min-h-[56px] sm:min-h-[72px] md:min-h-[82px] border border-black/20 bg-black/25 flex items-start justify-end p-1.5 sm:p-2 opacity-25 text-xs sm:text-sm font-mono text-white/40 rounded-xs select-none"
+                className="min-h-[64px] sm:min-h-[82px] md:min-h-[96px] border border-black/20 bg-black/25 flex items-start justify-end p-2 opacity-25 text-xs sm:text-sm font-mono text-white/40 rounded-xs select-none"
                 aria-hidden="true"
               >
                 {item.dayNumber}
@@ -181,18 +181,18 @@ export default function RetroCalendar({ entries = [], onSelectDate, selectedDate
               aria-label={`${monthNames[month]} ${item.dayNumber}, ${year}${
                 hasEntry ? ` - Journal entry: ${item.entry.title || 'Untitled'}` : ' - No entry'
               }${isToday ? ' (Today)' : ''}`}
-              className={`min-h-[56px] sm:min-h-[72px] md:min-h-[82px] border-2 flex flex-col justify-between p-1.5 sm:p-2 relative transition-all cursor-pointer rounded-xs text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f3df23] ${statusClass} ${
+              className={`min-h-[64px] sm:min-h-[82px] md:min-h-[96px] border-2 flex flex-col justify-between p-2 sm:p-2.5 relative transition-all cursor-pointer rounded-xs text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f3df23] ${statusClass} ${
                 isToday
                   ? 'ring-2 sm:ring-3 ring-[#f3df23] ring-offset-2 ring-offset-[#191642] font-black z-10'
                   : ''
               } ${
                 isSelected
-                  ? 'outline-2 outline-white scale-102 shadow-[0_0_10px_rgba(255,255,255,0.4)] z-10'
+                  ? 'outline-2 outline-white scale-102 shadow-[0_0_12px_rgba(255,255,255,0.4)] z-10'
                   : ''
               }`}
             >
               <div className="flex justify-between w-full items-start">
-                <span className={`text-xs sm:text-sm font-bold ${hasEntry ? 'font-sans' : 'font-mono'}`}>
+                <span className={`text-xs sm:text-sm md:text-base font-bold ${hasEntry ? 'font-sans' : 'font-mono'}`}>
                   {item.dayNumber}
                 </span>
                 <div className="flex items-center gap-1">

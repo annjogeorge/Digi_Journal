@@ -317,8 +317,8 @@ export default function Journal() {
 
         {/* Tab 2: Calendar Mode */}
         {activeTab === 'calendar' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="lg:col-span-2 xl:col-span-3">
               <RetroCalendar
                 entries={displayEntries}
                 selectedDate={selectedEntry?.date}
@@ -327,7 +327,7 @@ export default function Journal() {
             </div>
 
             {/* Selected day preview card */}
-            <div className="lg:col-span-1 bg-[#1a1744] border-2 border-black shadow-[4px_4px_0px_#000] p-4 sm:p-5 flex flex-col justify-between rounded-sm">
+            <div className="lg:col-span-1 xl:col-span-1 bg-[#1a1744] border-2 border-black shadow-[4px_4px_0px_#000] p-4 sm:p-5 flex flex-col justify-between rounded-sm">
               <div>
                 <h3 className="font-pixel text-xs text-[#f3df23] pb-2 border-b border-black/40 mb-3 uppercase tracking-wider">
                   Selected Day Summary

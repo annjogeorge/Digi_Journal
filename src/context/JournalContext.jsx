@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { soundFx } from '../utils/soundEffects';
-import { supabase, isSupabaseConfigured } from '../services/supabase';
+import {
+  supabase,
+  isSupabaseConfigured,
+  saveSupabaseCredentials,
+  clearSupabaseCredentials,
+} from '../services/supabase';
 import { useToast } from './ToastContext';
 
 const JournalContext = createContext();
@@ -681,10 +686,24 @@ export function JournalProvider({ children }) {
   };
 
   // Auth Operations
+  const loginOfflineGuest = (name = 'Adventurer', email = 'adventurer@local.test') => {
+    const offlineUser = {
+      id: 'local-offline-user',
+      email,
+      user_metadata: { name },
+    };
+    setUser(offlineUser);
+    setProfile((p) => ({ ...p, name }));
+    showToast(`Started offline session as ${name}. Note: Cloud sync is inactive until Supabase keys are provided.`, 'info');
+    return offlineUser;
+  };
+
   const signInWithPassword = async (email, password) => {
     if (!supabase) {
-      showToast('Supabase client is not configured.', 'warning');
-      return;
+      const displayName = email.split('@')[0] || 'Adventurer';
+      const offlineUser = loginOfflineGuest(displayName, email);
+      showToast('Logged in to local offline mode. (Configure Supabase keys in Settings for cloud sync)', 'info');
+      return { user: offlineUser };
     }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
@@ -697,8 +716,9 @@ export function JournalProvider({ children }) {
 
   const signUpWithPassword = async (email, password, displayName) => {
     if (!supabase) {
-      showToast('Supabase client is not configured.', 'warning');
-      return;
+      const offlineUser = loginOfflineGuest(displayName, email);
+      showToast('Account created in local mode! Add Supabase keys in Settings to enable Cloud sync.', 'success');
+      return { user: offlineUser };
     }
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -890,6 +910,10 @@ export function JournalProvider({ children }) {
         setIsTutorialOpen,
         completeTutorial,
         replayTutorial,
+        loginOfflineGuest,
+        isSupabaseConfigured,
+        saveSupabaseCredentials,
+        clearSupabaseCredentials,
       }}
     >
       {children}

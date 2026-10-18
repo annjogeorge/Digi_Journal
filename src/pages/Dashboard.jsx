@@ -49,10 +49,10 @@ export default function Dashboard() {
   const streak = getStreakData();
 
   const desktopIcons = [
-    { title: 'My Journal', path: '/journal', icon: IMAGES.hero || IMAGES.computer, label: 'Journaling' },
+    { title: 'My Journal', path: '/journal', icon: IMAGES.diary, label: 'Journaling' },
     { title: 'Tasks & Quests', path: '/todo', icon: IMAGES.todo || IMAGES.controller, label: 'Tasks' },
     { title: 'Future Letters', path: '/future-me', icon: IMAGES.future || IMAGES.msg, label: 'Future Letters' },
-    { title: 'Calendar', path: '/journal?tab=calendar', isCalendar: true, label: 'Calendar' },
+    { title: 'Calendar', path: '/journal?tab=calendar', icon: IMAGES.calendar, label: 'Calendar' },
     { title: 'Stats & XP', path: '/stats', icon: IMAGES.computer, label: 'Statistics' },
     { title: 'Settings', path: '/settings', icon: IMAGES.cd, label: 'Settings' },
   ];
@@ -334,25 +334,12 @@ export default function Dashboard() {
                 }}
                 className="flex flex-col items-center justify-center p-3 hover:bg-white/10 border-2 border-transparent hover:border-black/50 cursor-pointer transition-all text-center rounded-xs"
               >
-                <div className="w-13 h-13 bg-[#2e2a5c] border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_#000] mb-2 p-1.5 overflow-hidden">
-                  {app.isCalendar ? (
-                    <div className="w-10 h-10 bg-[#fffdf0] border-2 border-black flex flex-col overflow-hidden shadow-[1px_1px_0px_#000]">
-                      <div className="bg-[#ff4757] h-3.5 border-b-2 border-black flex items-center justify-around px-1">
-                        <div className="w-1.5 h-1.5 bg-black rounded-xs" />
-                        <div className="w-1.5 h-1.5 bg-black rounded-xs" />
-                      </div>
-                      <div className="flex-1 flex flex-col items-center justify-center text-black">
-                        <span className="font-pixel text-[11px] font-bold leading-none">
-                          {new Date().getDate()}
-                        </span>
-                        <span className="font-sans text-[7px] font-bold uppercase tracking-wider text-black/60 leading-none mt-0.5">
-                          {new Date().toLocaleDateString('en-US', { month: 'short' })}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <img src={app.icon} alt={app.title} className="max-h-full max-w-full object-contain" />
-                  )}
+                <div className="w-16 h-16 sm:w-18 sm:h-18 bg-[#2e2a5c] border-2 border-black flex items-center justify-center shadow-[3px_3px_0px_#000] mb-2 p-2 overflow-hidden rounded-xs">
+                  <img
+                    src={app.icon}
+                    alt={app.title}
+                    className="max-h-full max-w-full object-contain [image-rendering:pixelated]"
+                  />
                 </div>
                 <span className="font-pixel text-[10px] text-white tracking-tight">{app.label}</span>
               </motion.div>

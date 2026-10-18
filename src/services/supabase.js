@@ -1,15 +1,38 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Retrieve credentials from Vite environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Retrieve credentials from Vite environment variables or localStorage
+const getCredential = (envKey, storageKey) => {
+  try {
+    const envVal = import.meta.env[envKey];
+    if (
+      envVal &&
+      !envVal.includes('placeholder') &&
+      envVal !== 'https://your-project.supabase.co' &&
+      envVal !== 'your-anon-key-here'
+    ) {
+      return envVal;
+    }
+    const stored = localStorage.getItem(storageKey);
+    if (stored && stored.trim()) {
+      return stored.trim();
+    }
+    return '';
+  } catch {
+    return '';
+  }
+};
+
+export const supabaseUrl = getCredential('VITE_SUPABASE_URL', 'dj_supabase_url');
+export const supabaseAnonKey = getCredential('VITE_SUPABASE_ANON_KEY', 'dj_supabase_anon_key');
 
 // Detect if real Supabase credentials are configured
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&
+  supabaseUrl.startsWith('https://') &&
   supabaseUrl !== 'https://your-project.supabase.co' &&
-  !supabaseUrl.includes('placeholder')
+  !supabaseUrl.includes('placeholder') &&
+  supabaseAnonKey !== 'your-anon-key-here'
 );
 
 // Instantiate client if configured, otherwise null
@@ -21,3 +44,24 @@ export const supabase = isSupabaseConfigured
       },
     })
   : null;
+
+export const saveSupabaseCredentials = (url, anonKey) => {
+  try {
+    if (url && anonKey) {
+      localStorage.setItem('dj_supabase_url', url.trim());
+      localStorage.setItem('dj_supabase_anon_key', anonKey.trim());
+      window.location.reload();
+      return true;
+    }
+  } catch {
+    return false;
+  }
+};
+
+export const clearSupabaseCredentials = () => {
+  try {
+    localStorage.removeItem('dj_supabase_url');
+    localStorage.removeItem('dj_supabase_anon_key');
+    window.location.reload();
+  } catch {}
+};
