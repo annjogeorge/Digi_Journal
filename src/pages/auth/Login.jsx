@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useJournal } from '../../context/JournalContext';
 import { soundFx } from '../../utils/soundEffects';
 import PixelStars from '../../components/ui/PixelStars';
@@ -8,6 +8,7 @@ import { Mail, Lock, Eye, EyeOff, LogIn, ArrowLeft, Sparkles, AlertCircle } from
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signInWithPassword, user } = useJournal();
 
   const [email, setEmail] = useState('');
@@ -15,6 +16,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState(false);
 
   // If already logged in, offer quick jump to journal/dashboard
   if (user) {
@@ -59,6 +61,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setIsEmailUnconfirmed(false);
 
     if (!email || !password) {
       setErrorMessage('Please fill in both email and password.');
@@ -69,16 +72,18 @@ export default function Login() {
     soundFx.play('click');
 
     try {
-      await signInWithPassword(email, password);
+      await signInWithPassword(email.trim(), password);
       soundFx.play('complete');
-      navigate('/dashboard');
+      const dest = location.state?.redirectTo || '/dashboard';
+      navigate(dest);
     } catch (err) {
       // Format friendly error messages
       const msg = err.message || '';
       if (msg.toLowerCase().includes('invalid login credentials')) {
         setErrorMessage('Incorrect email or password. Please verify your details.');
       } else if (msg.toLowerCase().includes('email not confirmed')) {
-        setErrorMessage('Please check your inbox and verify your email before logging in.');
+        setIsEmailUnconfirmed(true);
+        setErrorMessage('Your email address has not been confirmed yet. Please verify your email before logging in.');
       } else {
         setErrorMessage(msg || 'An error occurred during log in. Please try again.');
       }
@@ -129,9 +134,27 @@ export default function Login() {
 
           {/* Error Banner */}
           {errorMessage && (
-            <div className="bg-red-950/80 border-2 border-red-500/80 p-3 flex items-start gap-2.5 text-xs font-sans text-red-200">
-              <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
+            <div className="bg-red-950/80 border-2 border-red-500/80 p-3 flex flex-col gap-2 text-xs font-sans text-red-200">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                <span className="flex-1">{errorMessage}</span>
+              </div>
+              {isEmailUnconfirmed && (
+                <div className="pt-2 border-t border-red-500/30 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.play('click');
+                      navigate('/check-email', {
+                        state: { email: email.trim() },
+                      });
+                    }}
+                    className="font-pixel text-[11px] text-[#f3df23] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    Resend / Check Confirmation Instructions →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

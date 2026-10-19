@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useJournal } from '../../context/JournalContext';
 import { soundFx } from '../../utils/soundEffects';
 import PixelStars from '../../components/ui/PixelStars';
@@ -20,6 +20,7 @@ import {
 
 export default function SignUp() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signUpWithPassword, user } = useJournal();
 
   const [displayName, setDisplayName] = useState('');
@@ -75,9 +76,19 @@ export default function SignUp() {
     soundFx.play('click');
 
     try {
-      await signUpWithPassword(email, password, displayName.trim());
+      const res = await signUpWithPassword(email.trim(), password, displayName.trim());
       soundFx.play('complete');
-      navigate('/dashboard');
+      if (res?.emailConfirmationPending) {
+        navigate('/check-email', {
+          state: {
+            email: email.trim(),
+            displayName: displayName.trim(),
+          },
+        });
+      } else {
+        const dest = location.state?.redirectTo || '/dashboard';
+        navigate(dest);
+      }
     } catch (err) {
       const msg = err.message || '';
       if (msg.toLowerCase().includes('already registered')) {

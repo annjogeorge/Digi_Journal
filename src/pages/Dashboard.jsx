@@ -49,10 +49,13 @@ export default function Dashboard() {
   const streak = getStreakData();
 
   const playerName = user
-    ? (profile.name && profile.name !== 'Guest'
-        ? profile.name
-        : user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Adventurer')
-    : (profile.name && profile.name !== 'Guest' ? profile.name : 'Explorer');
+    ? (user.user_metadata?.display_name ||
+       user.user_metadata?.name ||
+       (profile?.name && profile.name !== 'Explorer' && profile.name !== 'Guest' ? profile.name : null) ||
+       user.user_metadata?.full_name ||
+       user.email?.split('@')[0] ||
+       'Adventurer')
+    : (profile?.name && profile.name !== 'Guest' ? profile.name : 'Explorer');
 
   const desktopIcons = [
     { title: 'My Journal', path: '/journal', icon: IMAGES.diary, label: 'Journaling' },

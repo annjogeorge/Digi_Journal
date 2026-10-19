@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import RetroNavbar from '../components/ui/RetroNavbar';
 import PixelStars from '../components/ui/PixelStars';
@@ -9,6 +9,7 @@ import SuggestionModal from '../components/ui/SuggestionModal';
 import { useJournal } from '../context/JournalContext';
 import { soundFx } from '../utils/soundEffects';
 import { useToast } from '../context/ToastContext';
+import { supabase } from '../services/supabase';
 import {
   Download,
   Upload,
@@ -44,16 +45,47 @@ export default function Settings() {
   } = useJournal();
   const { showToast } = useToast();
 
-  const [userName, setUserName] = useState(profile.name || 'Annjo');
+  const [userName, setUserName] = useState(
+    profile.name && profile.name !== 'Guest' && profile.name !== 'Explorer'
+      ? profile.name
+      : user?.user_metadata?.display_name || user?.user_metadata?.name || profile.name || 'Explorer'
+  );
   const [soundEnabled, setSoundEnabled] = useState(soundFx.soundEnabled);
   const [volume, setVolume] = useState(soundFx.volume);
   const [isSaved, setIsSaved] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
 
-  const handleProfileSave = (e) => {
+  useEffect(() => {
+    const currentName =
+      (profile.name && profile.name !== 'Guest' && profile.name !== 'Explorer' ? profile.name : null) ||
+      user?.user_metadata?.display_name ||
+      user?.user_metadata?.name;
+    if (currentName) {
+      setUserName(currentName);
+    }
+  }, [profile.name, user]);
+
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-    setProfile((p) => ({ ...p, name: userName }));
+    const trimmed = userName.trim() || 'Explorer';
+    setProfile((p) => ({ ...p, name: trimmed }));
+
+    if (user && supabase) {
+      try {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          name: trimmed,
+          updated_at: new Date().toISOString(),
+        });
+        await supabase.auth.updateUser({
+          data: { display_name: trimmed, name: trimmed },
+        });
+      } catch (err) {
+        console.warn('Could not persist profile name to Supabase:', err);
+      }
+    }
+
     soundFx.setSoundEnabled(soundEnabled);
     soundFx.setVolume(volume);
     soundFx.play('save');

@@ -200,6 +200,7 @@ export function JournalProvider({ children }) {
       // 4. Fetch profile (or initialize safe profile for first-time user)
       const currentUserObj = userObj || user;
       const fallbackName =
+        currentUserObj?.user_metadata?.display_name ||
         currentUserObj?.user_metadata?.name ||
         currentUserObj?.user_metadata?.full_name ||
         currentUserObj?.email?.split('@')[0] ||
@@ -212,7 +213,7 @@ export function JournalProvider({ children }) {
         .maybeSingle();
 
       if (remoteProfile) {
-        if (remoteProfile.name && remoteProfile.name !== 'Guest') {
+        if (remoteProfile.name && remoteProfile.name !== 'Guest' && remoteProfile.name !== 'Explorer') {
           setProfile((p) => ({ ...p, name: remoteProfile.name }));
         } else {
           setProfile((p) => ({ ...p, name: fallbackName }));
@@ -240,6 +241,7 @@ export function JournalProvider({ children }) {
       // Offline fallback / profile table missing: guarantee name is never left as 'Guest'
       const currentUserObj = userObj || user;
       const fallbackName =
+        currentUserObj?.user_metadata?.display_name ||
         currentUserObj?.user_metadata?.name ||
         currentUserObj?.user_metadata?.full_name ||
         currentUserObj?.email?.split('@')[0] ||
@@ -255,7 +257,7 @@ export function JournalProvider({ children }) {
     setLetters([]);
     setXp(0);
     setUnlockedAchievements([]);
-    setProfile({ name: 'Guest', soundEnabled: true, volume: 0.5 });
+    setProfile({ name: 'Explorer', soundEnabled: true, volume: 0.5 });
     try {
       localStorage.removeItem(STORAGE_KEYS.ENTRIES);
       localStorage.removeItem(STORAGE_KEYS.TODOS);
@@ -281,6 +283,7 @@ export function JournalProvider({ children }) {
       setAuthLoading(false);
       if (initialUser) {
         const initialName =
+          initialUser.user_metadata?.display_name ||
           initialUser.user_metadata?.name ||
           initialUser.user_metadata?.full_name ||
           initialUser.email?.split('@')[0] ||
@@ -300,6 +303,7 @@ export function JournalProvider({ children }) {
         // If switched to a new user account, clear previous data first then load remote records
         clearUserData();
         const initialName =
+          currentUser.user_metadata?.display_name ||
           currentUser.user_metadata?.name ||
           currentUser.user_metadata?.full_name ||
           currentUser.email?.split('@')[0] ||
@@ -401,78 +405,80 @@ export function JournalProvider({ children }) {
 
   // Journal CRUD
   const saveEntry = async (entryData) => {
+    if (!user) {
+      showToast('Please sign in or create an account to save reflections.', 'warning');
+      return false;
+    }
+
+    if (!supabase) {
+      showToast('Account services are temporarily unavailable.', 'error');
+      return false;
+    }
+
     const isNew = !entries.some((e) => e.id === entryData.id);
     const dateStr = entryData.date || new Date().toISOString().split('T')[0];
 
-    let entryToSave = {
-      ...entryData,
-      id: entryData.id || (user ? undefined : `entry-${Date.now()}`),
-      date: dateStr,
-      pageType: entryData.pageType || 'entry',
-      subtitle: entryData.subtitle || '',
-      handwritingStyle: entryData.handwritingStyle || 'cozy',
-      stickers: entryData.stickers || [],
-      createdAt: entryData.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      const payload = {
+        user_id: user.id,
+        entry_date: dateStr,
+        title: entryData.title || (entryData.pageType === 'title_page' ? 'Title Page' : ''),
+        content: entryData.content || '',
+        mood: entryData.mood || 'happy',
+        tags: entryData.tags || [],
+        is_favorite: Boolean(entryData.isFavorite),
+        word_count: entryData.wordCount || 0,
+        handwriting_style: entryData.handwritingStyle || 'cozy',
+        stickers: entryData.stickers || [],
+        page_type: entryData.pageType || 'entry',
+        subtitle: entryData.subtitle || '',
+        updated_at: new Date().toISOString(),
+      };
 
-    // If Supabase authenticated
-    if (user && supabase) {
-      try {
-        const payload = {
-          user_id: user.id,
-          entry_date: dateStr,
-          title: entryData.title || (entryData.pageType === 'title_page' ? 'Title Page' : ''),
-          content: entryData.content || '',
-          mood: entryData.mood || 'happy',
-          tags: entryData.tags || [],
-          is_favorite: Boolean(entryData.isFavorite),
-          word_count: entryData.wordCount || 0,
-          handwriting_style: entryData.handwritingStyle || 'cozy',
-          stickers: entryData.stickers || [],
-          page_type: entryData.pageType || 'entry',
-          subtitle: entryData.subtitle || '',
-          updated_at: new Date().toISOString(),
-        };
+      if (entryData.id && !entryData.id.startsWith('entry-')) {
+        payload.id = entryData.id;
+      }
 
-        if (entryData.id && !entryData.id.startsWith('entry-')) {
-          payload.id = entryData.id;
-        }
+      const { data: savedDb, error } = await supabase
+        .from('journal_entries')
+        .upsert(payload)
+        .select()
+        .single();
 
-        const { data: savedDb, error } = await supabase
-          .from('journal_entries')
-          .upsert(payload)
-          .select()
-          .single();
-
-        if (error) {
-          showToast('Failed to save to cloud: ' + error.message, 'error');
-          return false;
-        }
-
-        entryToSave = {
-          ...entryToSave,
-          id: savedDb.id,
-        };
-      } catch {
-        showToast('Network error while saving journal entry.', 'error');
+      if (error) {
+        showToast('Failed to save to cloud: ' + error.message, 'error');
         return false;
       }
-    }
 
-    let updated;
-    if (isNew) {
-      updated = [entryToSave, ...entries.filter((e) => e.id !== entryToSave.id)];
-      addXp(25, 'Journal Entry Logged');
-    } else {
-      updated = entries.map((e) => (e.id === entryToSave.id ? entryToSave : e));
-    }
+      const entryToSave = {
+        ...entryData,
+        id: savedDb.id,
+        date: dateStr,
+        pageType: entryData.pageType || 'entry',
+        subtitle: entryData.subtitle || '',
+        handwritingStyle: entryData.handwritingStyle || 'cozy',
+        stickers: entryData.stickers || [],
+        createdAt: savedDb.created_at || entryData.createdAt || new Date().toISOString(),
+        updatedAt: savedDb.updated_at || new Date().toISOString(),
+      };
 
-    setEntries(updated);
-    soundFx.play('save');
-    showToast('Journal page saved successfully!', 'success');
-    checkAchievements(updated, todos, letters);
-    return true;
+      let updated;
+      if (isNew) {
+        updated = [entryToSave, ...entries.filter((e) => e.id !== entryToSave.id)];
+        addXp(25, 'Journal Entry Logged');
+      } else {
+        updated = entries.map((e) => (e.id === entryToSave.id ? entryToSave : e));
+      }
+
+      setEntries(updated);
+      soundFx.play('save');
+      showToast('Journal page saved successfully!', 'success');
+      checkAchievements(updated, todos, letters);
+      return true;
+    } catch {
+      showToast('Network error while saving journal entry.', 'error');
+      return false;
+    }
   };
 
   const deleteEntry = async (id) => {
@@ -716,16 +722,12 @@ export function JournalProvider({ children }) {
   };
 
   // Auth Operations
-  const loginOfflineGuest = (name = 'Adventurer', email = 'adventurer@local.test') => {
-    const offlineUser = {
-      id: 'local-offline-user',
-      email,
-      user_metadata: { name },
-    };
-    setUser(offlineUser);
+  const loginOfflineGuest = (name = 'Explorer') => {
+    // Keep user state null to ensure visitor remains in explore-first preview mode
+    setUser(null);
     setProfile((p) => ({ ...p, name }));
-    showToast(`Started guest session as ${name}.`, 'info');
-    return offlineUser;
+    showToast(`Exploring in preview mode as ${name}.`, 'info');
+    return null;
   };
 
   const signInWithPassword = async (email, password) => {
@@ -749,45 +751,82 @@ export function JournalProvider({ children }) {
       showToast(errorMsg, 'error');
       throw new Error(errorMsg);
     }
+
+    const emailRedirectTo = `${window.location.origin}/auth/callback`;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name: displayName } },
+      options: {
+        emailRedirectTo,
+        data: {
+          display_name: displayName,
+          name: displayName,
+        },
+      },
     });
+
     if (error) {
       showToast(error.message, 'error');
       throw error;
     }
 
-    // Auto authenticate if session provided or try immediate login
-    if (data?.session) {
+    // Case 1: Session is immediately established (email confirmation disabled in Supabase)
+    if (data?.session && data?.user) {
       setUser(data.user);
       setProfile((p) => ({ ...p, name: displayName }));
-      showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
-      return data;
-    }
 
-    try {
-      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (!signInErr && signInData?.user) {
-        setUser(signInData.user);
-        setProfile((p) => ({ ...p, name: displayName }));
-        showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
-        return signInData;
+      try {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          name: displayName,
+          sound_enabled: true,
+          volume: 0.5,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (profileErr) {
+        console.warn('Profile sync:', profileErr);
       }
-    } catch {
-      // Email confirmation may be active in Supabase project
+
+      showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
+      return {
+        user: data.user,
+        session: data.session,
+        emailConfirmationPending: false,
+      };
     }
 
-    if (data?.user) {
-      setUser(data.user);
-      setProfile((p) => ({ ...p, name: displayName }));
+    // Case 2: Session is null (email confirmation is required by Supabase)
+    // NEVER treat an unconfirmed signup as an active session!
+    return {
+      user: data?.user || null,
+      session: null,
+      emailConfirmationPending: true,
+    };
+  };
+
+  const resendConfirmationEmail = async (email) => {
+    if (!supabase) {
+      const errorMsg = 'Account services are temporarily unavailable. Please try again later.';
+      showToast(errorMsg, 'error');
+      throw new Error(errorMsg);
     }
 
-    showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
+    const emailRedirectTo = `${window.location.origin}/auth/callback`;
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: {
+        emailRedirectTo,
+      },
+    });
+
+    if (error) {
+      showToast(error.message, 'error');
+      throw error;
+    }
+
+    showToast('Confirmation email sent! Check your inbox.', 'success');
     return data;
   };
 
@@ -937,6 +976,7 @@ export function JournalProvider({ children }) {
         isCloudConnected,
         signInWithPassword,
         signUpWithPassword,
+        resendConfirmationEmail,
         signOutUser,
         resetPassword,
         updateUserPassword,

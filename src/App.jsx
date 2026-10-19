@@ -12,6 +12,8 @@ import Login from './pages/auth/Login';
 import SignUp from './pages/auth/SignUp';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
+import CheckEmail from './pages/auth/CheckEmail';
+import AuthCallback from './pages/auth/AuthCallback';
 
 function App() {
   const navigate = useNavigate();
@@ -59,6 +61,8 @@ function App() {
       <Route path="/suggestions" element={<Suggestions />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/check-email" element={<CheckEmail />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
