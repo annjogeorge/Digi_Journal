@@ -16,12 +16,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  ShieldCheck,
 } from 'lucide-react';
 
 export default function SignUp() {
   const navigate = useNavigate();
-  const { signUpWithPassword, user, isSupabaseConfigured, saveSupabaseCredentials } = useJournal();
+  const { signUpWithPassword, user } = useJournal();
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,9 +31,6 @@ export default function SignUp() {
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showSupabaseConfig, setShowSupabaseConfig] = useState(false);
-  const [customUrl, setCustomUrl] = useState('');
-  const [customAnonKey, setCustomAnonKey] = useState('');
 
   // If already logged in, redirect directly to dashboard
   React.useEffect(() => {
@@ -134,72 +130,15 @@ export default function SignUp() {
             </p>
           </div>
 
-          {/* Supabase status / quick config card */}
-              {!isSupabaseConfigured && (
-                <div className="bg-[#151236] border-2 border-[#f3df23] p-3 text-xs font-sans text-white/90 rounded-xs shadow-[2px_2px_0px_#000]">
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <span className="font-pixel text-[10px] text-[#f3df23] uppercase">
-                      Supabase Cloud Sync: Not Configured
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowSupabaseConfig(!showSupabaseConfig)}
-                      className="font-pixel text-[8px] bg-[#f3df23] text-black px-2 py-0.5 border border-black hover:bg-[#ffe838] cursor-pointer"
-                    >
-                      {showSupabaseConfig ? 'Close' : 'Connect Keys'}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-white/75 leading-relaxed">
-                    You can still sign up and use DigiJournal immediately in <strong>Local Mode</strong>. To enable encrypted Supabase cloud backup across devices, add your Supabase project keys.
-                  </p>
+          {/* Error Alert */}
+          {errorMessage && (
+            <div className="bg-red-950/80 border-2 border-red-500/80 p-3 flex items-start gap-2.5 text-xs font-sans text-red-200">
+              <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
-                  {showSupabaseConfig && (
-                    <div className="mt-2.5 pt-2 border-t border-black/40 flex flex-col gap-2">
-                      <div>
-                        <label className="block text-[9px] font-pixel text-[#f3df23] uppercase mb-0.5">Project URL</label>
-                        <input
-                          type="url"
-                          placeholder="https://xyz.supabase.co"
-                          value={customUrl}
-                          onChange={(e) => setCustomUrl(e.target.value)}
-                          className="w-full bg-black/60 border border-black px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#f3df23]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-pixel text-[#f3df23] uppercase mb-0.5">Anon Public Key</label>
-                        <input
-                          type="text"
-                          placeholder="eyJhbGciOi..."
-                          value={customAnonKey}
-                          onChange={(e) => setCustomAnonKey(e.target.value)}
-                          className="w-full bg-black/60 border border-black px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#f3df23]"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (customUrl && customAnonKey) {
-                            saveSupabaseCredentials(customUrl, customAnonKey);
-                          }
-                        }}
-                        className="mt-1 px-3 py-1 bg-[#50fa7b] text-black font-pixel text-[9px] border border-black hover:bg-[#6efc93] shadow-[1px_1px_0px_#000] cursor-pointer font-bold self-start"
-                      >
-                        Save & Connect Supabase
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Error Alert */}
-              {errorMessage && (
-                <div className="bg-red-950/80 border-2 border-red-500/80 p-3 flex items-start gap-2.5 text-xs font-sans text-red-200">
-                  <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 font-sans text-xs">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 font-sans text-xs">
                 {/* Display Name */}
                 <div>
                   <label htmlFor="signup-name" className="block font-pixel text-[10px] text-[#f3df23] uppercase mb-1">

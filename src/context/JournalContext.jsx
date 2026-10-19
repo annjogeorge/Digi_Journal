@@ -724,16 +724,15 @@ export function JournalProvider({ children }) {
     };
     setUser(offlineUser);
     setProfile((p) => ({ ...p, name }));
-    showToast(`Started offline session as ${name}. Note: Cloud sync is inactive until Supabase keys are provided.`, 'info');
+    showToast(`Started guest session as ${name}.`, 'info');
     return offlineUser;
   };
 
   const signInWithPassword = async (email, password) => {
     if (!supabase) {
-      const displayName = email.split('@')[0] || 'Adventurer';
-      const offlineUser = loginOfflineGuest(displayName, email);
-      showToast('Logged in to local offline mode. (Configure Supabase keys in Settings for cloud sync)', 'info');
-      return { user: offlineUser };
+      const errorMsg = 'Account services are temporarily unavailable. Please try again later.';
+      showToast(errorMsg, 'error');
+      throw new Error(errorMsg);
     }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
@@ -746,9 +745,9 @@ export function JournalProvider({ children }) {
 
   const signUpWithPassword = async (email, password, displayName) => {
     if (!supabase) {
-      const offlineUser = loginOfflineGuest(displayName, email);
-      showToast(`Welcome, ${displayName}! Account created in local mode.`, 'success');
-      return { user: offlineUser };
+      const errorMsg = 'Account services are temporarily unavailable. Please try again later.';
+      showToast(errorMsg, 'error');
+      throw new Error(errorMsg);
     }
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -808,8 +807,9 @@ export function JournalProvider({ children }) {
   // Password Recovery Operations
   const resetPassword = async (email) => {
     if (!supabase) {
-      showToast('Supabase client is not configured.', 'warning');
-      throw new Error('Supabase client is not configured.');
+      const errorMsg = 'Account services are temporarily unavailable. Please try again later.';
+      showToast(errorMsg, 'error');
+      throw new Error(errorMsg);
     }
     const redirectUrl = `${window.location.origin}/reset-password`;
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -825,8 +825,9 @@ export function JournalProvider({ children }) {
 
   const updateUserPassword = async (newPassword) => {
     if (!supabase) {
-      showToast('Supabase client is not configured.', 'warning');
-      throw new Error('Supabase client is not configured.');
+      const errorMsg = 'Account services are temporarily unavailable. Please try again later.';
+      showToast(errorMsg, 'error');
+      throw new Error(errorMsg);
     }
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword,
