@@ -48,6 +48,12 @@ export default function Dashboard() {
   const tasksCompletedToday = todos.filter((t) => t.completed).length;
   const streak = getStreakData();
 
+  const playerName = user
+    ? (profile.name && profile.name !== 'Guest'
+        ? profile.name
+        : user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Adventurer')
+    : (profile.name && profile.name !== 'Guest' ? profile.name : 'Explorer');
+
   const desktopIcons = [
     { title: 'My Journal', path: '/journal', icon: IMAGES.diary, label: 'Journaling' },
     { title: 'Tasks & Quests', path: '/todo', icon: IMAGES.todo || IMAGES.controller, label: 'Tasks' },
@@ -86,7 +92,7 @@ export default function Dashboard() {
               <Sparkles size={12} className="text-[#f3df23]" />
             </div>
             <h1 className="font-pixel text-lg sm:text-xl md:text-2xl text-white tracking-wide">
-              Welcome back, {user ? (profile.name || 'Adventurer') : 'Explorer'}!
+              Welcome back, {playerName}!
             </h1>
             <p className="text-white/75 text-xs sm:text-sm mt-1 font-sans">
               Ready for your daily journaling quest? Level {currentLevel} Adventurer.

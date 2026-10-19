@@ -1,16 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Retrieve credentials from Vite environment variables or localStorage
-const getCredential = (envKey, storageKey) => {
+const getCredential = (envKeys, storageKey) => {
   try {
-    const envVal = import.meta.env[envKey];
-    if (
-      envVal &&
-      !envVal.includes('placeholder') &&
-      envVal !== 'https://your-project.supabase.co' &&
-      envVal !== 'your-anon-key-here'
-    ) {
-      return envVal;
+    const keys = Array.isArray(envKeys) ? envKeys : [envKeys];
+    for (const key of keys) {
+      const envVal = import.meta.env[key];
+      if (
+        envVal &&
+        !envVal.includes('placeholder') &&
+        envVal !== 'https://your-project.supabase.co' &&
+        envVal !== 'your-anon-key-here'
+      ) {
+        return envVal.trim();
+      }
     }
     const stored = localStorage.getItem(storageKey);
     if (stored && stored.trim()) {
@@ -22,8 +25,8 @@ const getCredential = (envKey, storageKey) => {
   }
 };
 
-export const supabaseUrl = getCredential('VITE_SUPABASE_URL', 'dj_supabase_url');
-export const supabaseAnonKey = getCredential('VITE_SUPABASE_ANON_KEY', 'dj_supabase_anon_key');
+export const supabaseUrl = getCredential(['VITE_SUPABASE_URL', 'SUPABASE_URL'], 'dj_supabase_url');
+export const supabaseAnonKey = getCredential(['VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY'], 'dj_supabase_anon_key');
 
 // Detect if real Supabase credentials are configured
 export const isSupabaseConfigured = Boolean(

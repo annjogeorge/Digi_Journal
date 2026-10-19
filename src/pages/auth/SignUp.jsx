@@ -32,10 +32,16 @@ export default function SignUp() {
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successInfo, setSuccessInfo] = useState(null);
   const [showSupabaseConfig, setShowSupabaseConfig] = useState(false);
   const [customUrl, setCustomUrl] = useState('');
   const [customAnonKey, setCustomAnonKey] = useState('');
+
+  // If already logged in, redirect directly to dashboard
+  React.useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Live Password policy validations
   const isLengthValid = password.length >= 6;
@@ -43,33 +49,6 @@ export default function SignUp() {
   const hasNumber = /[0-9]/.test(password);
   const isMatch = password.length > 0 && password === confirmPassword;
   const isPolicySatisfied = isLengthValid && hasLetter && hasNumber;
-
-  if (user && !successInfo) {
-    return (
-      <div className="min-h-screen bg-[#242262] bg-grid flex items-center justify-center p-4 relative select-none">
-        <PixelStars />
-        <div className="max-w-md w-full bg-[#1e1b4b] border-2 border-black shadow-[4px_4px_0px_#000] p-6 text-center z-10 text-white">
-          <div className="w-12 h-12 bg-[#50fa7b] border-2 border-black mx-auto flex items-center justify-center mb-3 shadow-[2px_2px_0px_#000]">
-            <ShieldCheck size={24} className="text-black" />
-          </div>
-          <h2 className="font-pixel text-base text-white mb-2">Account Active</h2>
-          <p className="font-sans text-xs text-white/80 mb-6">
-            You are signed in as <strong className="text-[#f3df23]">{user.email}</strong>.
-          </p>
-          <PixelButton
-            variant="yellow"
-            size="md"
-            onClick={() => {
-              soundFx.play('click');
-              navigate('/dashboard');
-            }}
-          >
-            Go to Dashboard
-          </PixelButton>
-        </div>
-      </div>
-    );
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -100,9 +79,9 @@ export default function SignUp() {
     soundFx.play('click');
 
     try {
-      const data = await signUpWithPassword(email, password, displayName.trim());
+      await signUpWithPassword(email, password, displayName.trim());
       soundFx.play('complete');
-      setSuccessInfo(data);
+      navigate('/dashboard');
     } catch (err) {
       const msg = err.message || '';
       if (msg.toLowerCase().includes('already registered')) {
@@ -116,11 +95,11 @@ export default function SignUp() {
   };
 
   return (
-    <div className="min-h-screen bg-[#242262] bg-grid text-white flex flex-col justify-center items-center p-4 relative select-none">
+    <div className="min-h-screen bg-[#242262] bg-grid text-white flex flex-col items-center justify-start p-4 py-8 relative select-none overflow-y-auto">
       <PixelStars />
 
       {/* Top Navigation Back Link */}
-      <div className="absolute top-4 left-4 z-20">
+      <div className="w-full max-w-md flex justify-start mb-3 z-20 sm:absolute sm:top-4 sm:left-4 sm:mb-0 sm:w-auto">
         <Link
           to="/"
           onClick={() => soundFx.play('blip')}
@@ -130,7 +109,7 @@ export default function SignUp() {
         </Link>
       </div>
 
-      <main className="max-w-md w-full bg-[#1e1b4b] border-2 border-black shadow-[4px_4px_0px_#000] z-10 flex flex-col overflow-hidden my-8">
+      <main className="max-w-md w-full bg-[#1e1b4b] border-2 border-black shadow-[4px_4px_0px_#000] z-10 flex flex-col overflow-hidden my-auto">
         {/* Retro Header Bar */}
         <div className="bg-[#131135] px-4 py-2.5 border-b-2 border-black flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -146,67 +125,16 @@ export default function SignUp() {
 
         {/* Content Box */}
         <div className="p-6 flex flex-col gap-5">
-          {successInfo ? (
-            /* Friendly Welcome Screen on Successful Registration */
-            <div className="flex flex-col items-center text-center py-2">
-              <div className="w-14 h-14 bg-[#50fa7b] border-2 border-black flex items-center justify-center mb-3 shadow-[2px_2px_0px_#000]">
-                <CheckCircle2 size={30} className="text-black" />
-              </div>
+          <div>
+            <h1 className="font-pixel text-lg text-white mb-1 tracking-wide">
+              Create Your Journal
+            </h1>
+            <p className="font-sans text-xs text-white/70 leading-relaxed">
+              Start your own personal digital book. All entries and data are private and secured by Row Level Security.
+            </p>
+          </div>
 
-              <h2 className="font-pixel text-base text-white mb-2">
-                Welcome to DigiJournal!
-              </h2>
-
-              <p className="font-sans text-xs text-white/80 leading-relaxed mb-4">
-                Your account for <strong className="text-[#f3df23]">{email}</strong> has been registered.
-              </p>
-
-              <div className="bg-[#131135] border border-black p-3.5 mb-5 text-left font-sans text-xs text-white/85 flex items-start gap-2.5">
-                <Mail size={18} className="text-[#f3df23] shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-white block mb-0.5">Email Verification:</span>
-                  Please check your inbox. If email confirmation is enabled in your project, follow the link sent to your email to activate your account.
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 w-full">
-                <PixelButton
-                  variant="yellow"
-                  size="md"
-                  onClick={() => {
-                    soundFx.play('click');
-                    navigate('/login');
-                  }}
-                  className="w-full justify-center"
-                >
-                  Proceed to Log In
-                </PixelButton>
-
-                <PixelButton
-                  variant="purple"
-                  size="sm"
-                  onClick={() => {
-                    soundFx.play('blip');
-                    navigate('/dashboard');
-                  }}
-                  className="w-full justify-center"
-                >
-                  Enter Journal Dashboard
-                </PixelButton>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div>
-                <h1 className="font-pixel text-lg text-white mb-1 tracking-wide">
-                  Create Your Journal
-                </h1>
-                <p className="font-sans text-xs text-white/70 leading-relaxed">
-                  Start your own personal digital book. All entries and data are private and secured by Row Level Security.
-                </p>
-              </div>
-
-              {/* Supabase status / quick config card */}
+          {/* Supabase status / quick config card */}
               {!isSupabaseConfigured && (
                 <div className="bg-[#151236] border-2 border-[#f3df23] p-3 text-xs font-sans text-white/90 rounded-xs shadow-[2px_2px_0px_#000]">
                   <div className="flex items-center justify-between gap-1 mb-1.5">
@@ -434,8 +362,6 @@ export default function SignUp() {
                   </Link>
                 </span>
               </div>
-            </>
-          )}
         </div>
       </main>
     </div>

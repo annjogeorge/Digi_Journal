@@ -97,11 +97,11 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-[#242262] bg-grid text-white flex flex-col justify-center items-center p-4 relative select-none">
+    <div className="min-h-screen bg-[#242262] bg-grid text-white flex flex-col items-center justify-start p-4 py-8 relative select-none overflow-y-auto">
       <PixelStars />
 
       {/* Top Navigation Back Link */}
-      <div className="absolute top-4 left-4 z-20">
+      <div className="w-full max-w-md flex justify-start mb-3 z-20 sm:absolute sm:top-4 sm:left-4 sm:mb-0 sm:w-auto">
         <Link
           to="/login"
           onClick={() => soundFx.play('blip')}
@@ -111,7 +111,7 @@ export default function ResetPassword() {
         </Link>
       </div>
 
-      <main className="max-w-md w-full bg-[#1e1b4b] border-2 border-black shadow-[4px_4px_0px_#000] z-10 flex flex-col overflow-hidden">
+      <main className="max-w-md w-full bg-[#1e1b4b] border-2 border-black shadow-[4px_4px_0px_#000] z-10 flex flex-col overflow-hidden my-auto">
         {/* Retro Header Bar */}
         <div className="bg-[#131135] px-4 py-2.5 border-b-2 border-black flex items-center justify-between">
           <div className="flex items-center gap-2">

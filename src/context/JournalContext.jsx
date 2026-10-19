@@ -198,6 +198,13 @@ export function JournalProvider({ children }) {
       }
 
       // 4. Fetch profile (or initialize safe profile for first-time user)
+      const currentUserObj = userObj || user;
+      const fallbackName =
+        currentUserObj?.user_metadata?.name ||
+        currentUserObj?.user_metadata?.full_name ||
+        currentUserObj?.email?.split('@')[0] ||
+        'Adventurer';
+
       const { data: remoteProfile } = await supabase
         .from('profiles')
         .select('*')
@@ -205,17 +212,21 @@ export function JournalProvider({ children }) {
         .maybeSingle();
 
       if (remoteProfile) {
-        if (remoteProfile.name) setProfile((p) => ({ ...p, name: remoteProfile.name }));
+        if (remoteProfile.name && remoteProfile.name !== 'Guest') {
+          setProfile((p) => ({ ...p, name: remoteProfile.name }));
+        } else {
+          setProfile((p) => ({ ...p, name: fallbackName }));
+          supabase.from('profiles').update({ name: fallbackName }).eq('id', userId).then();
+        }
         if (remoteProfile.xp !== undefined) setXp(remoteProfile.xp);
         if (remoteProfile.unlocked_achievements) setUnlockedAchievements(remoteProfile.unlocked_achievements);
       } else {
         // Safe profile creation for new user
-        const initialName = user?.user_metadata?.name || 'Player';
         await supabase
           .from('profiles')
           .insert({
             id: userId,
-            name: initialName,
+            name: fallbackName,
             xp: 0,
             unlocked_achievements: [],
             sound_enabled: true,
@@ -223,10 +234,17 @@ export function JournalProvider({ children }) {
             tutorial_completed: false,
           })
           .then();
-        setProfile((p) => ({ ...p, name: initialName }));
+        setProfile((p) => ({ ...p, name: fallbackName }));
       }
     } catch {
-      // Offline fallback continues smoothly
+      // Offline fallback / profile table missing: guarantee name is never left as 'Guest'
+      const currentUserObj = userObj || user;
+      const fallbackName =
+        currentUserObj?.user_metadata?.name ||
+        currentUserObj?.user_metadata?.full_name ||
+        currentUserObj?.email?.split('@')[0] ||
+        'Adventurer';
+      setProfile((p) => ({ ...p, name: fallbackName }));
     }
   }, [user]);
 
@@ -262,7 +280,13 @@ export function JournalProvider({ children }) {
       setUser(initialUser);
       setAuthLoading(false);
       if (initialUser) {
-        fetchSupabaseData(initialUser.id);
+        const initialName =
+          initialUser.user_metadata?.name ||
+          initialUser.user_metadata?.full_name ||
+          initialUser.email?.split('@')[0] ||
+          'Adventurer';
+        setProfile((p) => ({ ...p, name: initialName }));
+        fetchSupabaseData(initialUser.id, initialUser);
       }
     });
 
@@ -275,7 +299,13 @@ export function JournalProvider({ children }) {
       } else if (currentUser) {
         // If switched to a new user account, clear previous data first then load remote records
         clearUserData();
-        await fetchSupabaseData(currentUser.id);
+        const initialName =
+          currentUser.user_metadata?.name ||
+          currentUser.user_metadata?.full_name ||
+          currentUser.email?.split('@')[0] ||
+          'Adventurer';
+        setProfile((p) => ({ ...p, name: initialName }));
+        await fetchSupabaseData(currentUser.id, currentUser);
       }
     });
 
@@ -717,7 +747,7 @@ export function JournalProvider({ children }) {
   const signUpWithPassword = async (email, password, displayName) => {
     if (!supabase) {
       const offlineUser = loginOfflineGuest(displayName, email);
-      showToast('Account created in local mode! Add Supabase keys in Settings to enable Cloud sync.', 'success');
+      showToast(`Welcome, ${displayName}! Account created in local mode.`, 'success');
       return { user: offlineUser };
     }
     const { data, error } = await supabase.auth.signUp({
@@ -729,7 +759,36 @@ export function JournalProvider({ children }) {
       showToast(error.message, 'error');
       throw error;
     }
-    showToast('Account created! Please check your email to verify.', 'success');
+
+    // Auto authenticate if session provided or try immediate login
+    if (data?.session) {
+      setUser(data.user);
+      setProfile((p) => ({ ...p, name: displayName }));
+      showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
+      return data;
+    }
+
+    try {
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (!signInErr && signInData?.user) {
+        setUser(signInData.user);
+        setProfile((p) => ({ ...p, name: displayName }));
+        showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
+        return signInData;
+      }
+    } catch {
+      // Email confirmation may be active in Supabase project
+    }
+
+    if (data?.user) {
+      setUser(data.user);
+      setProfile((p) => ({ ...p, name: displayName }));
+    }
+
+    showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
     return data;
   };
 
