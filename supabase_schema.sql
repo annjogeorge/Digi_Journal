@@ -41,6 +41,12 @@ CREATE TABLE IF NOT EXISTS public.todos (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Safe migrations for existing todos tables
+ALTER TABLE public.todos ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'medium';
+ALTER TABLE public.todos ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Personal';
+ALTER TABLE public.todos ADD COLUMN IF NOT EXISTS due_date DATE DEFAULT CURRENT_DATE;
+ALTER TABLE public.todos ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
 -- 3. Create table for Future Me Time Capsule Letters
 CREATE TABLE IF NOT EXISTS public.future_letters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -55,6 +61,13 @@ CREATE TABLE IF NOT EXISTS public.future_letters (
   opened_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Safe migrations for existing future_letters tables
+ALTER TABLE public.future_letters ADD COLUMN IF NOT EXISTS recipient TEXT DEFAULT 'Future Me';
+ALTER TABLE public.future_letters ADD COLUMN IF NOT EXISTS mood TEXT DEFAULT 'grateful';
+ALTER TABLE public.future_letters ADD COLUMN IF NOT EXISTS envelope_style TEXT DEFAULT 'classic';
+ALTER TABLE public.future_letters ADD COLUMN IF NOT EXISTS is_opened BOOLEAN DEFAULT false;
+ALTER TABLE public.future_letters ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ;
 
 -- 4. Create table for Player Profile & Settings
 CREATE TABLE IF NOT EXISTS public.profiles (

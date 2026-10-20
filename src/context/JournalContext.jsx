@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { soundFx } from '../utils/soundEffects';
 import {
   supabase,
@@ -126,8 +126,8 @@ export function JournalProvider({ children }) {
   }, [tutorialCompleted]);
 
   // Fetch data from Supabase for logged-in user
-  const fetchSupabaseData = useCallback(async (userId) => {
-    if (!supabase) return;
+  const fetchSupabaseData = useCallback(async (userId, userObj = null) => {
+    if (!supabase || !userId) return;
     try {
       // 1. Fetch entries
       const { data: remoteEntries, error: eErr } = await supabase
@@ -198,7 +198,7 @@ export function JournalProvider({ children }) {
       }
 
       // 4. Fetch profile (or initialize safe profile for first-time user)
-      const currentUserObj = userObj || user;
+      const currentUserObj = userObj;
       const fallbackName =
         currentUserObj?.user_metadata?.display_name ||
         currentUserObj?.user_metadata?.name ||
@@ -239,7 +239,7 @@ export function JournalProvider({ children }) {
       }
     } catch {
       // Offline fallback / profile table missing: guarantee name is never left as 'Guest'
-      const currentUserObj = userObj || user;
+      const currentUserObj = userObj;
       const fallbackName =
         currentUserObj?.user_metadata?.display_name ||
         currentUserObj?.user_metadata?.name ||
@@ -248,7 +248,7 @@ export function JournalProvider({ children }) {
         'Adventurer';
       setProfile((p) => ({ ...p, name: fallbackName }));
     }
-  }, [user]);
+  }, []);
 
   // Completely wipe in-memory state and cached storage to prevent data leaks across accounts
   const clearUserData = useCallback(() => {
@@ -270,6 +270,8 @@ export function JournalProvider({ children }) {
     }
   }, []);
 
+  const lastSyncedUserIdRef = useRef(null);
+
   // Auth session initialization
   useEffect(() => {
     if (!supabase) {
@@ -277,30 +279,47 @@ export function JournalProvider({ children }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const initialUser = session?.user ?? null;
-      setUser(initialUser);
-      setAuthLoading(false);
-      if (initialUser) {
-        const initialName =
-          initialUser.user_metadata?.display_name ||
-          initialUser.user_metadata?.name ||
-          initialUser.user_metadata?.full_name ||
-          initialUser.email?.split('@')[0] ||
-          'Adventurer';
-        setProfile((p) => ({ ...p, name: initialName }));
-        fetchSupabaseData(initialUser.id, initialUser);
-      }
-    });
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Get current session once on mount
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!isMounted) return;
+        const initialUser = session?.user ?? null;
+        setUser(initialUser);
+        setAuthLoading(false);
+
+        if (initialUser && lastSyncedUserIdRef.current !== initialUser.id) {
+          lastSyncedUserIdRef.current = initialUser.id;
+          const initialName =
+            initialUser.user_metadata?.display_name ||
+            initialUser.user_metadata?.name ||
+            initialUser.user_metadata?.full_name ||
+            initialUser.email?.split('@')[0] ||
+            'Adventurer';
+          setProfile((p) => ({ ...p, name: initialName }));
+          fetchSupabaseData(initialUser.id, initialUser);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setAuthLoading(false);
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
+      setAuthLoading(false);
 
       if (event === 'SIGNED_OUT' || !currentUser) {
+        lastSyncedUserIdRef.current = null;
         clearUserData();
-      } else if (currentUser) {
+      } else if (currentUser && lastSyncedUserIdRef.current !== currentUser.id) {
         // If switched to a new user account, clear previous data first then load remote records
+        lastSyncedUserIdRef.current = currentUser.id;
         clearUserData();
         const initialName =
           currentUser.user_metadata?.display_name ||
@@ -313,7 +332,10 @@ export function JournalProvider({ children }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
   }, [fetchSupabaseData, clearUserData]);
 
   // Sync to local storage
@@ -439,11 +461,40 @@ export function JournalProvider({ children }) {
         payload.id = entryData.id;
       }
 
-      const { data: savedDb, error } = await supabase
+      let { data: savedDb, error } = await supabase
         .from('journal_entries')
         .upsert(payload)
         .select()
         .single();
+
+      // Graceful fallback: If Supabase schema lacks newer columns (handwriting_style, stickers, page_type, subtitle),
+      // retry upsert with standard base columns so saving never fails.
+      if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+        console.warn('Retrying saveEntry with base columns:', error.message);
+        const fallbackPayload = {
+          user_id: user.id,
+          entry_date: dateStr,
+          title: payload.title,
+          content: payload.content,
+          mood: payload.mood,
+          tags: payload.tags,
+          is_favorite: payload.is_favorite,
+          word_count: payload.word_count,
+          updated_at: payload.updated_at,
+        };
+        if (payload.id) fallbackPayload.id = payload.id;
+
+        const retry = await supabase
+          .from('journal_entries')
+          .upsert(fallbackPayload)
+          .select()
+          .single();
+
+        if (!retry.error && retry.data) {
+          savedDb = retry.data;
+          error = null;
+        }
+      }
 
       if (error) {
         showToast('Failed to save to cloud: ' + error.message, 'error');
@@ -536,9 +587,15 @@ export function JournalProvider({ children }) {
       createdAt: new Date().toISOString(),
     };
 
+    // Optimistic UI update: instantly show the task in the list!
+    setTodos((prev) => [newTodo, ...prev]);
+    soundFx.play('click');
+    addXp(5, 'Task Added');
+    showToast('New quest added to log!', 'success');
+
     if (user && supabase) {
       try {
-        const { data: dbTodo, error } = await supabase
+        let { data: dbTodo, error } = await supabase
           .from('todos')
           .insert({
             user_id: user.id,
@@ -550,17 +607,34 @@ export function JournalProvider({ children }) {
           .select()
           .single();
 
-        if (!error && dbTodo) {
-          newTodo.id = dbTodo.id;
-        }
-      } catch {}
-    }
+        // If priority/category/due_date column missing in older schema, retry with basic columns
+        if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+          console.warn('Retrying todos insert with base columns:', error.message);
+          const retry = await supabase
+            .from('todos')
+            .insert({
+              user_id: user.id,
+              text: newTodo.text,
+            })
+            .select()
+            .single();
 
-    const updated = [newTodo, ...todos];
-    setTodos(updated);
-    soundFx.play('click');
-    addXp(5, 'Task Added');
-    showToast('New quest added to log!', 'success');
+          if (!retry.error && retry.data) {
+            dbTodo = retry.data;
+            error = null;
+          }
+        }
+
+        if (error) {
+          console.error('Supabase todos error:', error);
+        } else if (dbTodo) {
+          // Update the temporary ID with real database UUID
+          setTodos((prev) => prev.map((t) => (t.id === newTodo.id ? { ...t, id: dbTodo.id } : t)));
+        }
+      } catch (err) {
+        console.error('Todo network error:', err);
+      }
+    }
   };
 
   const toggleTodo = async (id) => {
@@ -627,7 +701,7 @@ export function JournalProvider({ children }) {
 
     if (user && supabase) {
       try {
-        const { data: dbLetter, error } = await supabase
+        let { data: dbLetter, error } = await supabase
           .from('future_letters')
           .insert({
             user_id: user.id,
@@ -641,10 +715,32 @@ export function JournalProvider({ children }) {
           .select()
           .single();
 
+        // Schema fallback if envelope_style or recipient missing in older schema
+        if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+          console.warn('Retrying future_letters insert with base columns:', error.message);
+          const retry = await supabase
+            .from('future_letters')
+            .insert({
+              user_id: user.id,
+              title: newLetter.title,
+              body: newLetter.body,
+              unlock_date: newLetter.unlockDate,
+            })
+            .select()
+            .single();
+
+          if (!retry.error && retry.data) {
+            dbLetter = retry.data;
+            error = null;
+          }
+        }
+
         if (!error && dbLetter) {
           newLetter.id = dbLetter.id;
         }
-      } catch {}
+      } catch (letterErr) {
+        console.error('Letter network error:', letterErr);
+      }
     }
 
     const updated = [newLetter, ...letters];
@@ -771,14 +867,33 @@ export function JournalProvider({ children }) {
       throw error;
     }
 
-    // Case 1: Session is immediately established (email confirmation disabled in Supabase)
-    if (data?.session && data?.user) {
-      setUser(data.user);
+    let activeSession = data?.session;
+    let activeUser = data?.user;
+
+    // Direct Login: If session is null (or when email confirmation is disabled in Supabase),
+    // immediately attempt signInWithPassword so user logs in straight away without confirmation email!
+    if (!activeSession) {
+      try {
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (!signInErr && signInData?.session && signInData?.user) {
+          activeSession = signInData.session;
+          activeUser = signInData.user;
+        }
+      } catch (signInCatch) {
+        console.warn('Direct sign-in attempt after signup:', signInCatch);
+      }
+    }
+
+    if (activeSession && activeUser) {
+      setUser(activeUser);
       setProfile((p) => ({ ...p, name: displayName }));
 
       try {
         await supabase.from('profiles').upsert({
-          id: data.user.id,
+          id: activeUser.id,
           name: displayName,
           sound_enabled: true,
           volume: 0.5,
@@ -790,14 +905,13 @@ export function JournalProvider({ children }) {
 
       showToast(`Welcome to DigiJournal, ${displayName}!`, 'success');
       return {
-        user: data.user,
-        session: data.session,
+        user: activeUser,
+        session: activeSession,
         emailConfirmationPending: false,
       };
     }
 
-    // Case 2: Session is null (email confirmation is required by Supabase)
-    // NEVER treat an unconfirmed signup as an active session!
+    // Only if confirmation is strictly enforced by Supabase and login was rejected
     return {
       user: data?.user || null,
       session: null,

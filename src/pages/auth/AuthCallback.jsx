@@ -23,6 +23,9 @@ export default function AuthCallback() {
 
   useEffect(() => {
     let isMounted = true;
+    let subscription = null;
+    let redirectTimeout = null;
+    let fallbackTimeout = null;
 
     async function handleAuthCallback() {
       if (!supabase) {
@@ -108,7 +111,7 @@ export default function AuthCallback() {
             soundFx.play('complete');
 
             // Brief pause so user sees the success state before redirecting
-            setTimeout(() => {
+            redirectTimeout = setTimeout(() => {
               if (isMounted) {
                 navigate('/dashboard', { replace: true });
               }
@@ -118,7 +121,7 @@ export default function AuthCallback() {
         }
 
         // If no session immediately, listen for onAuthStateChange event
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        const { data } = supabase.auth.onAuthStateChange(
           async (event, currentSession) => {
             if (currentSession && currentSession.user && isMounted) {
               const activeUser = currentSession.user;
@@ -140,20 +143,23 @@ export default function AuthCallback() {
                 console.warn('Profile sync:', profileErr);
               }
 
-              setConfirmedUser(activeUser);
-              setStatus('success');
-              soundFx.play('complete');
-              setTimeout(() => {
-                if (isMounted) {
-                  navigate('/dashboard', { replace: true });
-                }
-              }, 1800);
+              if (isMounted) {
+                setConfirmedUser(activeUser);
+                setStatus('success');
+                soundFx.play('complete');
+                redirectTimeout = setTimeout(() => {
+                  if (isMounted) {
+                    navigate('/dashboard', { replace: true });
+                  }
+                }, 1800);
+              }
             }
           }
         );
+        subscription = data?.subscription;
 
         // Timeout fallback if session isn't established within 6 seconds
-        const timeout = setTimeout(() => {
+        fallbackTimeout = setTimeout(() => {
           if (isMounted && status === 'verifying') {
             setStatus('error');
             setErrorMessage(
@@ -161,11 +167,6 @@ export default function AuthCallback() {
             );
           }
         }, 6000);
-
-        return () => {
-          subscription.unsubscribe();
-          clearTimeout(timeout);
-        };
       } catch (err) {
         if (isMounted) {
           setStatus('error');
@@ -178,6 +179,9 @@ export default function AuthCallback() {
 
     return () => {
       isMounted = false;
+      subscription?.unsubscribe();
+      if (redirectTimeout) clearTimeout(redirectTimeout);
+      if (fallbackTimeout) clearTimeout(fallbackTimeout);
     };
   }, [navigate]);
 

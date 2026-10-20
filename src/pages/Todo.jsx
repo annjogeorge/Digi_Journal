@@ -7,6 +7,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import RetroSelect from '../components/ui/RetroSelect';
 import AuthPromptModal from '../components/ui/AuthPromptModal';
 import { useJournal } from '../context/JournalContext';
+import { useToast } from '../context/ToastContext';
 import { soundFx } from '../utils/soundEffects';
 import { Check, Plus, Trash2, Calendar, CheckSquare, Sparkles, ShieldAlert } from 'lucide-react';
 
@@ -26,6 +27,7 @@ const PRIORITY_OPTIONS = [
 
 export default function Todo() {
   const { todos, addTodo, toggleTodo, deleteTodo, user } = useJournal();
+  const { showToast } = useToast();
   const [filter, setFilter] = useState('all'); // all, active, completed, overdue
   const [newText, setNewText] = useState('');
   const [newPriority, setNewPriority] = useState('medium');
@@ -37,8 +39,11 @@ export default function Todo() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const handleAddSubmit = (e) => {
-    e.preventDefault();
-    if (!newText.trim()) return;
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newText.trim()) {
+      showToast('Please enter a task description before adding.', 'warning');
+      return;
+    }
 
     if (!user) {
       setIsAuthPromptOpen(true);
@@ -175,7 +180,12 @@ export default function Todo() {
                 className="bg-[#1b1847] border-2 border-black px-2.5 py-2 text-white font-sans text-xs focus:outline-none shadow-[2px_2px_0px_#000]"
               />
 
-              <PixelButton type="submit" size="sm" variant="yellow">
+              <PixelButton
+                type="submit"
+                size="sm"
+                variant="yellow"
+                onClick={handleAddSubmit}
+              >
                 Add Task
               </PixelButton>
             </div>
