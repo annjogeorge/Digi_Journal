@@ -227,6 +227,7 @@ export default function JournalSideIndex({
             const MoodIcon = MOOD_ICONS[item.mood] || Smile;
             const moodColor = MOOD_COLORS[item.mood] || '#50fa7b';
             const isTitlePage = item.pageType === 'title_page';
+            const isFreewrite = item.pageType === 'freewrite';
 
             // Derive preview text: first line of content
             const firstLine = item.content
@@ -242,7 +243,11 @@ export default function JournalSideIndex({
                   if (isMobileDrawer && onCloseDrawer) onCloseDrawer();
                 }}
                 className={`p-2.5 border-2 transition-all cursor-pointer relative group rounded-xs ${
-                  isSelected
+                  isTitlePage
+                    ? isSelected
+                      ? 'bg-gradient-to-r from-[#4d3810] to-[#271f54] border-[#f3df23] shadow-[3px_3px_0px_#f3df23] ring-1 ring-[#f3df23]'
+                      : 'bg-gradient-to-r from-[#38280d] to-[#1a1740] border-[#f3df23]/90 shadow-[3px_3px_0px_#000] hover:border-[#f3df23]'
+                    : isSelected
                     ? 'bg-[#292562] border-[#f3df23] shadow-[2px_2px_0px_#f3df23]'
                     : 'bg-[#141238] hover:bg-[#201d4f] border-black/70 shadow-[2px_2px_0px_#000]'
                 }`}
@@ -252,17 +257,27 @@ export default function JournalSideIndex({
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#f3df23]" />
                 )}
 
-                {/* Primary Row: Date as primary label + Mood/Favorite */}
+                {/* Primary Row: Date/Badge + Mood/Favorite */}
                 <div className="flex items-center justify-between gap-1 mb-1">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {isTitlePage ? (
-                      <span className="font-pixel text-[9px] bg-pink-500/20 text-pink-300 border border-pink-500/40 px-1 py-0.2 shrink-0">
-                        COVER
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <BookMarked size={12} className="text-[#f3df23] shrink-0" />
+                        <span className="font-pixel text-[8px] bg-[#f3df23] text-black font-bold px-1.5 py-0.5 border border-black shadow-[1px_1px_0px_#000] tracking-wider shrink-0 uppercase">
+                          ★ TITLE PAGE
+                        </span>
+                      </div>
                     ) : (
-                      <span className="font-sans text-xs font-bold text-white group-hover:text-[#f3df23] truncate">
-                        {formatDiaryDate(item.date)}
-                      </span>
+                      <div className="flex items-center gap-1 min-w-0">
+                        {isFreewrite && (
+                          <span className="font-pixel text-[8px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-1 py-0.2 shrink-0">
+                            FREE
+                          </span>
+                        )}
+                        <span className="font-sans text-xs font-bold text-white group-hover:text-[#f3df23] truncate">
+                          {formatDiaryDate(item.date)}
+                        </span>
+                      </div>
                     )}
 
                     {item.isFavorite && (
@@ -282,21 +297,21 @@ export default function JournalSideIndex({
                   </div>
                 </div>
 
-                {/* Secondary Row: Title if provided, or First-Line Content Preview */}
+                {/* Secondary Row: Title if provided, or Content Preview */}
                 {isTitlePage ? (
-                  <div>
-                    <h4 className="font-pixel text-[11px] text-[#f3df23] truncate">
-                      {item.title || 'Untitled Title Page'}
+                  <div className="pl-0.5 pt-0.5">
+                    <h4 className="font-pixel text-xs text-[#f3df23] truncate font-bold tracking-wide">
+                      {item.title || 'Untitled Section'}
                     </h4>
                     {item.subtitle && (
-                      <p className="font-sans text-[11px] text-white/70 truncate italic">
+                      <p className="font-sans text-[11px] text-[#fef08a] truncate italic mt-0.5">
                         {item.subtitle}
                       </p>
                     )}
                   </div>
                 ) : (
                   <div>
-                    {item.title && item.title !== 'Untitled Reflection' && (
+                    {item.title && item.title !== 'Untitled Reflection' && !isFreewrite && (
                       <div className="font-sans text-xs font-semibold text-white/90 truncate">
                         {item.title}
                       </div>

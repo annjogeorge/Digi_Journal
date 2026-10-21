@@ -18,6 +18,7 @@ import {
   Coffee,
   ShieldAlert,
   Frown,
+  BookMarked,
 } from 'lucide-react';
 import { soundFx } from '../../utils/soundEffects';
 import RetroSelect from './RetroSelect';
@@ -217,6 +218,9 @@ export default function BookIndexModal({
                   const MoodIcon = MOOD_ICONS[entry.mood] || Smile;
                   const displayPageNum = idx + 1;
 
+                  const isTitlePage = entry.pageType === 'title_page';
+                  const isFreewrite = entry.pageType === 'freewrite';
+
                   return (
                     <div
                       key={entry.id}
@@ -226,7 +230,11 @@ export default function BookIndexModal({
                         onClose();
                       }}
                       className={`py-3 px-3.5 flex items-center justify-between gap-3 cursor-pointer transition-colors group rounded-xs ${
-                        isCurrent
+                        isTitlePage
+                          ? isCurrent
+                            ? 'bg-[#f3df23]/40 border-l-4 border-l-[#3d2f1f] shadow-xs'
+                            : 'bg-[#f8e878]/30 border-l-4 border-l-[#d4a017] hover:bg-[#f8e878]/50'
+                          : isCurrent
                           ? 'bg-[#f3df23]/30 border-l-4 border-l-[#3d2f1f]'
                           : 'hover:bg-[#3d2f1f]/5'
                       }`}
@@ -239,8 +247,18 @@ export default function BookIndexModal({
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <h4 className="font-sans text-sm font-bold text-[#2b251f] group-hover:text-black truncate">
-                              {entry.title || 'Untitled Reflection'}
+                            {isTitlePage && (
+                              <span className="font-pixel text-[8px] bg-[#3d2f1f] text-[#f3df23] px-1.5 py-0.5 font-bold uppercase shrink-0 flex items-center gap-1">
+                                <BookMarked size={10} /> TITLE PAGE
+                              </span>
+                            )}
+                            {isFreewrite && (
+                              <span className="font-pixel text-[8px] bg-[#3d2f1f]/10 text-[#3d2f1f] px-1.5 py-0.5 uppercase shrink-0">
+                                FREE WRITE
+                              </span>
+                            )}
+                            <h4 className={`font-sans text-sm font-bold truncate ${isTitlePage ? 'text-black uppercase font-pixel text-xs tracking-wide' : 'text-[#2b251f] group-hover:text-black'}`}>
+                              {entry.title || (isFreewrite ? 'Pure Writing (Untitled)' : 'Untitled Reflection')}
                             </h4>
                             {entry.isFavorite && (
                               <Star size={13} className="fill-[#f3df23] text-[#3d2f1f] shrink-0" />

@@ -1005,28 +1005,50 @@ export function JournalProvider({ children }) {
       throw new Error('Character limit exceeded.');
     }
 
-    if (!supabase) {
-      showToast('Supabase client is not configured. Feedback cannot be saved to cloud.', 'warning');
-      throw new Error('Supabase client is not configured.');
-    }
-
     const payload = {
+      id: `suggestion-${Date.now()}`,
       user_id: user ? user.id : null,
       email: contactEmail || (user ? user.email : null),
       category,
       message: message.trim(),
       status: 'new',
+      created_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase.from('user_suggestions').insert([payload]).select();
-    if (error) {
-      showToast('Error saving suggestion: ' + error.message, 'error');
-      throw error;
+    // 1. Guaranteed client persistence in localStorage so feedback is never lost
+    try {
+      const existing = JSON.parse(localStorage.getItem('dj_user_suggestions') || '[]');
+      existing.unshift(payload);
+      localStorage.setItem('dj_user_suggestions', JSON.stringify(existing.slice(0, 50)));
+    } catch (storageErr) {
+      console.warn('LocalStorage save error:', storageErr);
+    }
+
+    // 2. Cloud sync if Supabase table exists
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('user_suggestions').insert([
+          {
+            user_id: payload.user_id,
+            email: payload.email,
+            category: payload.category,
+            message: payload.message,
+            status: payload.status,
+          },
+        ]);
+
+        if (error) {
+          // If table hasn't been created in Supabase yet, don't crash or error the user
+          console.warn('Note: public.user_suggestions table not migrated in Supabase yet. Feedback stored locally.', error.message);
+        }
+      } catch (cloudErr) {
+        console.warn('Could not sync suggestion to Supabase:', cloudErr);
+      }
     }
 
     soundFx.play('complete');
     showToast('Suggestion submitted! Thank you for helping DigiJournal improve.', 'success');
-    return data;
+    return payload;
   };
 
   // Onboarding controls

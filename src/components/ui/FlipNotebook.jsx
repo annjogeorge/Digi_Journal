@@ -61,7 +61,6 @@ export default function FlipNotebook({
   const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
   const [isNewPageModalOpen, setIsNewPageModalOpen] = useState(false);
   const [isDecorateMode, setIsDecorateMode] = useState(false);
-  const [showCornerHint, setShowCornerHint] = useState(true);
 
   // References
   const paperRef = useRef(null);
@@ -232,32 +231,27 @@ export default function FlipNotebook({
   const isNewPage = !entry || currentIndex === -1;
   const displayPageNumber = isNewPage ? totalEntries + 1 : currentIndex + 1;
 
-  const isFirstPage = currentIndex === totalEntries - 1;
-  const isLastPage = currentIndex === 0 && !isNewPage;
+  const isFirstPage = currentIndex === 0 && !isNewPage;
+  const isLastPage = currentIndex === totalEntries - 1 && !isNewPage;
 
-  // Turn to Next Page (forward: towards newer entries or create new)
+  // Turn to Next Page (forward: advance to next entry in book sequence)
   const handleNextPage = useCallback(() => {
     if (isFlipping) return;
-    if (currentIndex > 0) {
+    if (currentIndex >= 0 && currentIndex < totalEntries - 1) {
       soundFx.play('page');
       setFlipDirection('next');
       setIsFlipping(true);
+      onSelectEntry(allEntries[currentIndex + 1]);
       setTimeout(() => {
-        onSelectEntry(allEntries[currentIndex - 1]);
         setIsFlipping(false);
-      }, 260);
-    } else if (currentIndex === 0 && !isNewPage) {
-      soundFx.play('page');
-      setFlipDirection('next');
-      setIsFlipping(true);
-      setTimeout(() => {
-        setIsNewPageModalOpen(true);
-        setIsFlipping(false);
-      }, 260);
+      }, 320);
+    } else if (isLastPage) {
+      soundFx.play('blip');
+      setIsNewPageModalOpen(true);
     }
-  }, [currentIndex, isNewPage, isFlipping, allEntries, onSelectEntry]);
+  }, [currentIndex, totalEntries, isLastPage, isFlipping, allEntries, onSelectEntry]);
 
-  // Turn to Previous Page (backward: towards older entries)
+  // Turn to Previous Page (backward: return to previous entry in book sequence)
   const handlePrevPage = useCallback(() => {
     if (isFlipping) return;
     if (isNewPage) {
@@ -265,19 +259,19 @@ export default function FlipNotebook({
         soundFx.play('page');
         setFlipDirection('prev');
         setIsFlipping(true);
+        onSelectEntry(allEntries[totalEntries - 1]);
         setTimeout(() => {
-          onSelectEntry(allEntries[0]);
           setIsFlipping(false);
-        }, 260);
+        }, 320);
       }
-    } else if (currentIndex < totalEntries - 1) {
+    } else if (currentIndex > 0) {
       soundFx.play('page');
       setFlipDirection('prev');
       setIsFlipping(true);
+      onSelectEntry(allEntries[currentIndex - 1]);
       setTimeout(() => {
-        onSelectEntry(allEntries[currentIndex + 1]);
         setIsFlipping(false);
-      }, 260);
+      }, 320);
     }
   }, [currentIndex, isNewPage, totalEntries, isFlipping, allEntries, onSelectEntry]);
 
@@ -520,9 +514,9 @@ export default function FlipNotebook({
               ref={paperRef}
               initial={{
                 opacity: 0,
-                rotateY: flipDirection === 'next' ? -22 : 22,
+                rotateY: flipDirection === 'next' ? -14 : 14,
                 transformOrigin: flipDirection === 'next' ? 'left center' : 'right center',
-                scale: 0.985,
+                scale: 0.992,
               }}
               animate={{
                 opacity: 1,
@@ -531,13 +525,17 @@ export default function FlipNotebook({
               }}
               exit={{
                 opacity: 0,
-                rotateY: flipDirection === 'next' ? 22 : -22,
+                rotateY: flipDirection === 'next' ? 14 : -14,
                 transformOrigin: flipDirection === 'next' ? 'right center' : 'left center',
-                scale: 0.985,
+                scale: 0.992,
               }}
               transition={{
-                duration: 0.28,
-                ease: [0.25, 0.1, 0.25, 1],
+                duration: 0.35,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              style={{
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
               }}
               className="relative bg-[#fbf9f2] border-2 border-[#524436] text-[#2b251f] flex min-h-[640px] rounded-xs select-text overflow-hidden"
             >
@@ -568,7 +566,7 @@ export default function FlipNotebook({
               <div className="flex-1 notebook-ruled-lines flex flex-col justify-between pl-5 pr-5 sm:pl-7 sm:pr-8 py-5 relative z-10">
                 {pageType === 'title_page' ? (
                   /* ===================================================================
-                     OPTION B: DECORATIVE TITLE PAGE / SECTION DIVIDER
+                     TYPE 1: DECORATIVE TITLE PAGE / SECTION DIVIDER
                      =================================================================== */
                   <div className="flex-1 flex flex-col justify-center items-center text-center py-8">
                     <div className="inline-flex items-center gap-1.5 font-pixel text-[10px] bg-[#f3df23] text-black px-3 py-1 border-2 border-black shadow-[2px_2px_0px_#000] mb-6">
@@ -577,7 +575,7 @@ export default function FlipNotebook({
                     </div>
 
                     <div className="w-full max-w-lg space-y-4">
-                      {/* Title */}
+                      {/* Section Title */}
                       <input
                         type="text"
                         placeholder="ENTER TITLE (e.g. October Memories)..."
@@ -615,9 +613,58 @@ export default function FlipNotebook({
                       />
                     </div>
                   </div>
+                ) : pageType === 'freewrite' ? (
+                  /* ===================================================================
+                     TYPE 2: PURE WRITING PAGE (NO TITLE FIELD FOR UNINTERRUPTED WRITING)
+                     =================================================================== */
+                  <div className="flex-1 flex flex-col">
+                    {/* Header Row: Date Picker & Retro Mood Dropdown */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 mb-3 border-b-2 border-rose-300">
+                      {/* Date Selector */}
+                      <div className="flex items-center gap-2">
+                        <Calendar size={15} className="text-rose-600" />
+                        <input
+                          type="date"
+                          value={entryDate}
+                          onChange={(e) => {
+                            setEntryDate(e.target.value);
+                            triggerDebouncedAutosave({ entryDate: e.target.value });
+                          }}
+                          className="font-sans text-xs bg-white/90 border border-black/30 px-2.5 py-1 text-black shadow-xs focus:outline-none focus:border-black font-semibold"
+                        />
+                        <span className="font-pixel text-[8px] bg-stone-200 text-stone-700 px-1.5 py-0.5 border border-stone-400 uppercase tracking-wider">
+                          Free Write
+                        </span>
+                      </div>
+
+                      {/* Custom Retro Mood Dropdown */}
+                      <div className="flex items-center gap-2">
+                        <RetroMoodDropdown
+                          value={mood}
+                          onChange={(nextMood) => {
+                            setMood(nextMood);
+                            triggerDebouncedAutosave({ mood: nextMood });
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Main Long-Form Handwritten Writing Area - NO title input */}
+                    <textarea
+                      placeholder="Write freely without any titles... thoughts, ideas, memories, or stories..."
+                      value={content}
+                      onChange={(e) => {
+                        setContent(e.target.value);
+                        triggerDebouncedAutosave({ content: e.target.value });
+                      }}
+                      rows={16}
+                      style={{ lineHeight: '30px' }}
+                      className={`w-full flex-1 ${activeStyleDef.fontClass} text-xl sm:text-2xl text-[#1c1917] bg-transparent resize-none focus:outline-none placeholder:text-stone-400 select-text pt-1`}
+                    />
+                  </div>
                 ) : (
                   /* ===================================================================
-                     OPTION A: BLANK JOURNAL PAGE (TITLE IS OPTIONAL)
+                     TYPE 3: STANDARD JOURNAL PAGE (WITH OPTIONAL ENTRY TITLE)
                      =================================================================== */
                   <div className="flex-1 flex flex-col">
                     {/* Header Row: Date Picker & Retro Mood Dropdown */}
@@ -709,37 +756,6 @@ export default function FlipNotebook({
                   </div>
                 </div>
               </div>
-
-              {/* =====================================================================
-                  PAGE-CORNER TURNING INTERACTIONS (LOWER-LEFT & LOWER-RIGHT)
-                  ===================================================================== */}
-              {/* Lower-Left Corner: Turn to Previous Page */}
-              <div
-                onClick={handlePrevPage}
-                title={isFirstPage ? 'First Page' : 'Turn to Previous Page [←]'}
-                className={`corner-curl-bl ${
-                  isFirstPage ? 'opacity-30 cursor-not-allowed pointer-events-none' : ''
-                }`}
-              />
-
-              {/* Lower-Right Corner: Turn to Next Page */}
-              <div
-                onClick={handleNextPage}
-                title={isLastPage ? 'Last Page' : 'Turn to Next Page [→]'}
-                className={`corner-curl-br ${
-                  isLastPage ? 'opacity-30 cursor-not-allowed pointer-events-none' : ''
-                }`}
-              />
-
-              {/* First-Time Page Corner Turn Hint */}
-              {showCornerHint && totalEntries > 1 && (
-                <div
-                  onClick={() => setShowCornerHint(false)}
-                  className="absolute bottom-2 right-14 bg-[#1a1744] text-[#f3df23] font-pixel text-[8px] px-2 py-1 border border-black shadow-[2px_2px_0px_#000] z-30 cursor-pointer animate-bounce hidden sm:flex items-center gap-1"
-                >
-                  <span>Tap corner to turn page ➔</span>
-                </div>
-              )}
             </motion.div>
           </AnimatePresence>
         </div>
